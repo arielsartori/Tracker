@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bet Tracker">
+<title>Bet Tracker — ROI real con estadística honesta</title>
+<style>
+  :root{
+    --bg:#0E1116; --panel:#161B22; --panel2:#1C2330; --line:#2A3140;
+    --text:#E8EAF0; --muted:#8B93A7; --dim:#5A6275;
+    --pos:#34D399; --neg:#F87171; --warn:#F5B84B; --action:#5EA2FF;
+    --mono:ui-monospace,"SF Mono",Consolas,"Cascadia Mono",Menlo,monospace;
+    --sans:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);
+       font-size:15px;line-height:1.5;padding:28px 16px 80px}
+  .wrap{max-width:760px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:baseline;
+         border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:22px}
+  h1{font-family:var(--mono);font-size:17px;font-weight:600;letter-spacing:.08em}
+  h1 .tag{color:var(--dim);font-weight:400}
+  .io{display:flex;gap:10px}
+  .io button{background:none;border:1px solid var(--line);color:var(--muted);
+             font:12px var(--mono);padding:5px 10px;border-radius:6px;cursor:pointer}
+  .io button:hover{color:var(--text);border-color:var(--muted)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:18px;margin-bottom:18px}
+  .card h2{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;
+           color:var(--dim);margin-bottom:14px}
+
+  .row{display:grid;grid-template-columns:2fr 1.3fr .7fr .7fr auto;gap:10px}
+  @media(max-width:620px){.row{grid-template-columns:1fr 1fr;} .row button{grid-column:1/-1}}
+  input{background:var(--panel2);border:1px solid var(--line);color:var(--text);
+        border-radius:7px;padding:9px 11px;font:14px var(--sans);width:100%}
+  input:focus{outline:none;border-color:var(--action)}
+  input.num{font-family:var(--mono)}
+  button.primary{background:var(--action);color:#0A1220;border:none;border-radius:7px;
+        padding:9px 18px;font:600 14px var(--sans);cursor:pointer;white-space:nowrap}
+  button.primary:hover{filter:brightness(1.1)}
+  label{font:11px var(--mono);color:var(--dim);display:block;margin-bottom:4px;
+        letter-spacing:.05em}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+  @media(max-width:620px){.stats{grid-template-columns:repeat(2,1fr)}
+  .wl button{width:38px;height:38px;font-size:14px}
+  td{padding:10px 6px} body{padding:16px 10px 60px}}
+  .stat{background:var(--panel2);border-radius:8px;padding:10px 12px}
+  .stat .v{font:600 19px var(--mono)}
+  .stat .k{font:10px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+  .gauge{position:relative;height:64px;margin:6px 4px 2px}
+  .gauge .axis{position:absolute;top:32px;left:0;right:0;height:1px;background:var(--line)}
+  .gauge .zero{position:absolute;top:14px;bottom:12px;width:1px;background:var(--muted)}
+  .gauge .zero::after{content:"0%";position:absolute;top:-15px;left:-8px;
+        font:10px var(--mono);color:var(--muted)}
+  .gauge .band{position:absolute;top:26px;height:13px;border-radius:7px;opacity:.85}
+  .gauge .mean{position:absolute;top:20px;height:25px;width:3px;border-radius:2px}
+  .gauge .lbl{position:absolute;top:46px;font:10px var(--mono);color:var(--dim);
+        transform:translateX(-50%)}
+  .verdict{border-radius:8px;padding:12px 14px;font-size:14px;margin-top:14px;
+        border:1px solid var(--line);background:var(--panel2)}
+  .verdict b{font-family:var(--mono)}
+  .v-pos{border-color:var(--pos);color:var(--pos)}
+  .v-neg{border-color:var(--neg);color:var(--neg)}
+  .v-warn{color:var(--warn)}
+  .progress{height:4px;background:var(--panel2);border-radius:2px;margin-top:12px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--action);border-radius:2px}
+  .prog-lbl{font:10px var(--mono);color:var(--dim);margin-top:5px}
+
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{font:600 10px var(--mono);color:var(--dim);letter-spacing:.1em;text-transform:uppercase;
+     text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+  td.mono{font-family:var(--mono)}
+  .wl{display:inline-flex;gap:4px}
+  .wl button{width:28px;height:28px;border-radius:6px;border:1px solid var(--line);
+      background:none;color:var(--muted);font:600 12px var(--mono);cursor:pointer}
+  .wl button.w:hover{border-color:var(--pos);color:var(--pos)}
+  .wl button.l:hover{border-color:var(--neg);color:var(--neg)}
+  .wl button.c:hover{border-color:var(--warn);color:var(--warn)}
+  .p-pos{color:var(--pos)} .p-neg{color:var(--neg)}
+  .del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:15px}
+  .del:hover{color:var(--neg)}
+  .empty{color:var(--dim);font-size:13.5px;padding:8px 2px}
+  .note{color:var(--dim);font-size:12.5px;margin-top:10px;line-height:1.55}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>BET_TRACKER <span class="tag">// ROI real, estadística honesta</span></h1>
+    <div class="io">
+      <button onclick="exportCSV()">Exportar CSV</button>
+      <button onclick="showCSV()">Ver CSV</button>
+      <button onclick="document.getElementById('imp').click()">Importar</button>
+      <input type="file" id="imp" accept=".csv" style="display:none" onchange="importCSV(event)">
+    </div>
+  </header>
+
+  <div class="card">
+    <h2>Registrar pick — antes del partido, siempre</h2>
+    <div id="legs-chips" style="display:none;margin-bottom:10px"></div>
+    <div class="row">
+      <div><label>Partido</label><input id="f-match" placeholder="Sinner vs Alcaraz"></div>
+      <div><label>Tu pick</label><input id="f-pick" placeholder="Sinner"></div>
+      <div><label>Cuota</label><input id="f-odds" class="num" type="number" inputmode="decimal" step="0.01" min="1.01" placeholder="1.95"></div>
+      <div><label>Stake (u)</label><input id="f-stake" class="num" type="number" inputmode="decimal" step="0.5" min="0.5" value="1"></div>
+      <div style="align-self:end"><button class="primary" onclick="addPick()">Registrar</button></div>
+    </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <button class="io-like" id="btn-leg" onclick="addLeg()"
+        style="background:none;border:1px dashed var(--line);color:var(--muted);
+        font:12px var(--mono);padding:6px 12px;border-radius:6px;cursor:pointer">
+        + agregar pierna (combinada)</button>
+      <span id="combo-total" class="prog-lbl" style="margin:0"></span>
+      <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
+        <span class="prog-lbl" style="margin:0">sizing k</span>
+        <input id="cfg-k" class="num" type="number" inputmode="decimal" step="0.25" min="0.25" style="width:62px;padding:5px 8px" onchange="saveCfg()">
+        <span class="prog-lbl" style="margin:0">tope</span>
+        <input id="cfg-cap" class="num" type="number" inputmode="decimal" step="0.5" min="1" style="width:62px;padding:5px 8px" onchange="saveCfg()">
+      </span>
+    </div>
+    <div id="stake-hint" class="prog-lbl" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Veredicto</h2>
+    <div id="report"></div>
+  </div>
+
+  <div class="card">
+    <h2>Pendientes — marcar resultado</h2>
+    <div id="pending"></div>
+  </div>
+
+  <div class="card">
+    <h2>Historial</h2>
+    <div id="history"></div>
+    <div class="note">El veredicto usa el intervalo de confianza 95% del ROI por unidad
+    apostada. Medir contra resultados reales es válido pero lento: el azar de cada partido
+    mete mucho ruido, así que el intervalo tarda miles de picks en cerrarse (el propio
+    reporte te dice cuántos le faltan). Reglas: registrá el pick <b>antes</b> del partido,
+    cargalos <b>todos</b> — también los que te arrepentiste —, y stake chico y estable
+    mientras el veredicto siga en ámbar: mientras el intervalo cruce el cero, una buena
+    racha es indistinguible de suerte. Sobre las combinadas (×N): bajan el capital en juego
+    pero el margen de la casa se multiplica con cada pierna, y suben la varianza — esperá
+    drawdowns más profundos y un veredicto todavía más lento.</div>
+  </div>
+</div>
+
+<script>
+let picks = [];
+const LS_KEY = "bet_picks_v1";
+
+// Datos semilla: se cargan solo la primera vez (almacenamiento vacío).
+// Después manda siempre lo que el navegador tenga guardado.
+const SEED = [
+ {id:1,date:"2026-07-16",match:"Cerundolo vs kecmakovic",pick:"cerundolo",odds_taken:1.82,stake:3,result:"w"},
+ {id:2,date:"2026-07-16",match:"Sherif vs Quevedo",pick:"Sherif",odds_taken:1.57,stake:3,result:"w"},
+ {id:3,date:"2026-07-16",match:"Ruud vs Faria",pick:"Ruud",odds_taken:1.26,stake:5,result:"w"},
+ {id:4,date:"2026-07-16",match:"Bassols ribera vs RUS",pick:"Bassols",odds_taken:1.42,stake:3,result:"w"},
+ {id:5,date:"2026-07-16",match:"Merida vs Droguet",pick:"Merida",odds_taken:1.75,stake:3,result:"w"},
+ {id:6,date:"2026-07-16",match:"Valentova vs sasnovich",pick:"valentova",odds_taken:1.45,stake:3,result:"w"},
+ {id:7,date:"2026-07-16",match:"Tabilo vs Midon",pick:"Tabilo",odds_taken:1.33,stake:5,result:"w"},
+ {id:8,date:"2026-07-16",match:"Riera vs Kovinic",pick:"Riera",odds_taken:1.24,stake:5,result:"w"},
+ {id:9,date:"2026-07-16",match:"Kawa vs Udvardy",pick:"kawa",odds_taken:1.93,stake:3,result:"w"},
+ {id:10,date:"2026-07-16",match:"Arnaldi vs Dzumhur",pick:"Arnaldi",odds_taken:1.45,stake:3,result:"l"},
+ {id:11,date:"2026-07-16",match:"Gea vs Rice",pick:"Gea",odds_taken:1.22,stake:4,result:"w"},
+ {id:12,date:"2026-07-16",match:"Boca vs Sarmiento",pick:"Boca",odds_taken:1.65,stake:4,result:"w"},
+ {id:13,date:"2026-07-16",match:"Dellien vs Dalla valle",pick:"Dellien",odds_taken:1.65,stake:3,result:"w"},
+ {id:14,date:"2026-07-16",match:"Vallejo vs Travaglia",pick:"Vallejo",odds_taken:1.4,stake:5,result:"w"},
+ {id:15,date:"2026-07-16",match:"Borges vs Darderi",pick:"Darderi",odds_taken:1.8,stake:2.5,result:"w"},
+ {id:16,date:"2026-07-16",match:"Kostovic vs Bronzzeti",pick:"Bronzetti",odds_taken:2.32,stake:1.5,result:"w"},
+ {id:17,date:"2026-07-16",match:"Grabher vs Vanndrome",pick:"Vanndrome",odds_taken:1.88,stake:2.25,result:"l"},
+ {id:18,date:"2026-07-16",match:"Napolitano vs Villanueva",pick:"Napolitano",odds_taken:1.53,stake:3.75,result:"l"},
+ {id:19,date:"2026-07-16",match:"Shevchenko vs Stricker",pick:"Stricker",odds_taken:1.93,stake:2.25,result:"l"},
+ {id:20,date:"2026-07-17",match:"Ruud vs JMcerundolo",pick:"Ruud",odds_taken:1.35,stake:5.75,result:"l"},
+ {id:21,date:"2026-07-17",match:"Sherif vs Putintseva",pick:"Sherif",odds_taken:2.37,stake:1.5,result:"w"},
+ {id:22,date:"2026-07-17",match:"burruchaga vs Merida",pick:"Burruchaga",odds_taken:2.4,stake:1.5,result:"l"},
+ {id:23,date:"2026-07-17",match:"Dzumhur vs Molcan",pick:"Dzumhur",odds_taken:2.75,stake:1.25,result:"w"},
+ {id:24,date:"2026-07-17",match:"Bronzetti vs Chiesa",pick:"Bronzetti",odds_taken:1.6,stake:3.25,result:"w"},
+ {id:25,date:"2026-07-17",match:"Burruchaga vs Merida",pick:"SET BURRU",odds_taken:1.5,stake:4,result:"l"},
+ {id:26,date:"2026-07-17",match:"Sheriff vs Oliynykova",pick:"Sherif",odds_taken:1.91,stake:2.25,result:"w"},
+ {id:27,date:"2026-07-17",match:"Vallejo vs Darderi",pick:"Darderi",odds_taken:1.5,stake:4,result:"w"},
+ {id:28,date:"2026-07-17",match:"Collington vs Cerundolo",pick:"SET AMBOS",odds_taken:2.15,stake:1.75,result:"w"},
+ {id:29,date:"2026-07-17",match:"Bu vs Smith",pick:"Bu",odds_taken:1.57,stake:3.5,result:"w"},
+ {id:30,date:"2026-07-17",match:"Merida vs dzumhur",pick:"merida",odds_taken:1.42,stake:4.75,result:"w"},
+ {id:31,date:"2026-07-17",match:"Bronzetti vs Brancaccio",pick:"Bronzetti",odds_taken:1.65,stake:3,result:"w"},
+ {id:32,date:"2026-07-17",match:"Sakkari vs Korneeva / Tauson vs Krejcikova",pick:"Sakari + Krejcikova",odds_taken:2.48,stake:1.25,result:"",
+   legs:[{match:"Sakkari vs Korneeva",pick:"Sakari",odds:1.53},{match:"Tauson vs Krejcikova",pick:"Krejcikova",odds:1.62}]},
+ {id:33,date:"2026-07-17",match:"GANAN",pick:"MERIDA Y DARDO",odds_taken:2.13,stake:2,result:"w"},
+ {id:34,date:"2026-07-18",match:"Rublev vs Tabilo",pick:"Rublev",odds_taken:1.42,stake:4.75,result:"w"},
+ {id:35,date:"2026-07-18",match:"Guri vs Villanueva",pick:"Villanueva",odds_taken:4.1,stake:0.75,result:"l"},
+ {id:36,date:"2026-07-18",match:"Cigarran vs Rodriguez",pick:"Cigarran",odds_taken:4.55,stake:0.5,result:"l"},
+ {id:37,date:"2026-07-18",match:"Lajal vs Bu",pick:"BU",odds_taken:1.55,stake:3.75,result:""},
+ {id:38,date:"2026-07-18",match:"Ofner vs Molcan / Cerundolo vs Trungelliti",pick:"Ofner + Cerundolo",odds_taken:3.65,stake:0.75,result:"",
+   legs:[{match:"Ofner vs Molcan",pick:"Ofner",odds:2.4},{match:"Cerundolo vs Trungelliti",pick:"Cerundolo",odds:1.52}]},
+ {id:39,date:"2026-07-18",match:"Baez vs Kecmakovic",pick:"Baez",odds_taken:2.12,stake:1.75,result:""},
+ {id:40,date:"2026-07-18",match:"Man utd vs Wrexham",pick:"UTD o empate",odds_taken:1.93,stake:2.25,result:"l"},
+ {id:41,date:"2026-07-18",match:"Pellegrino vs Bueno",pick:"Pellegrino",odds_taken:1.44,stake:4.5,result:""},
+ {id:42,date:"2026-07-18",match:"Badosa vs Zidansek",pick:"Badosa",odds_taken:3.25,stake:1,result:"w"},
+ {id:43,date:"2026-07-18",match:"Badosa vs Zidansek",pick:"Badosa",odds_taken:4.55,stake:0.5,result:"w"},
+ {id:44,date:"2026-07-18",match:"badosa vs zidansek",pick:"badosa",odds_taken:1.67,stake:3,result:"w"},
+ {id:45,date:"2026-07-18",match:"Badosa vs zidansek / Merida vs dzumhur",pick:"badosa + merida",odds_taken:3.64,stake:0.75,result:"w",
+   legs:[{match:"Badosa vs zidansek",pick:"badosa",odds:1.8},{match:"Merida vs dzumhur",pick:"merida",odds:2.02}]},
+];
+
+function loadStore(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(raw){ picks = JSON.parse(raw); return; }
+  }catch(e){}
+  picks = SEED.slice();          // primera vez: cargar semilla
+  saveStore();
+}
+function saveStore(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(picks)); }catch(e){}
+}
+
+let draftLegs = [];
+let cfg = {k: 1.0, cap: 5.0};
+const CFG_KEY = "bet_cfg_v1";
+
+function loadCfg(){
+  try{ const raw = localStorage.getItem(CFG_KEY); if(raw) cfg = {...cfg, ...JSON.parse(raw)}; }catch(e){}
+  document.getElementById("cfg-k").value = cfg.k;
+  document.getElementById("cfg-cap").value = cfg.cap;
+}
+function saveCfg(){
+  cfg.k = parseFloat(document.getElementById("cfg-k").value) || 1;
+  cfg.cap = parseFloat(document.getElementById("cfg-cap").value) || 5;
+  try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){}
+  updateStakeHint();
+}
+
+function totalOdds(){
+  // cuota acumulada: piernas ya cargadas × la que está en el campo
+  let prod = draftLegs.reduce((a,l)=>a*l.odds, 1);
+  const cur = parseFloat(val("f-odds"));
+  if(cur > 1) prod *= cur;
+  return prod > 1 ? prod : null;
+}
+
+function suggestedStake(odds){
+  const raw = cfg.k / (odds - 1);
+  const capped = Math.min(cfg.cap, raw);
+  return Math.max(0.25, Math.round(capped*4)/4);   // redondeo a 0.25u, mínimo 0.25u
+}
+
+function updateStakeHint(){
+  const hint = document.getElementById("stake-hint");
+  const odds = totalOdds();
+  if(!odds){ hint.textContent = ""; return; }
+  const s = suggestedStake(odds);
+  const raw = cfg.k/(odds-1);
+  document.getElementById("f-stake").value = s;
+  hint.textContent = `stake sugerido: ${s}u  —  k/(cuota−1) = ${cfg.k}/${(odds-1).toFixed(2)}`
+    + (raw > cfg.cap ? `  (pedía ${raw.toFixed(1)}u, topeado en ${cfg.cap}u)` : "")
+    + `  ·  riesgo equiparado por apuesta`;
+}
+
+function showErr(msg){
+  const h = document.getElementById("stake-hint");
+  h.textContent = msg; h.style.color = "var(--neg)";
+  setTimeout(()=>{ h.style.color = ""; updateStakeHint(); }, 2600);
+}
+
+function addLeg(){
+  const match = val("f-match"), pick = val("f-pick"), odds = parseFloat(val("f-odds"));
+  if(!match || !pick || !(odds > 1)){ showErr("Completá partido, pick y cuota de esta pierna antes de agregar otra."); return; }
+  draftLegs.push({match, pick, odds});
+  ["f-match","f-pick","f-odds"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("f-match").focus();
+  renderDraft(); updateStakeHint();
+}
+
+function removeLeg(i){ draftLegs.splice(i,1); renderDraft(); updateStakeHint(); }
+
+function renderDraft(){
+  const box = document.getElementById("legs-chips");
+  const total = document.getElementById("combo-total");
+  if(!draftLegs.length){ box.style.display="none"; box.innerHTML=""; total.textContent=""; return; }
+  box.style.display="block";
+  box.innerHTML = draftLegs.map((l,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--panel2);
+      border:1px solid var(--line);border-radius:6px;padding:4px 8px;margin:0 6px 6px 0;
+      font:12px var(--mono)">${esc(l.pick)} @ ${l.odds.toFixed(2)}
+      <button class="del" style="font-size:13px" onclick="removeLeg(${i})">×</button></span>`).join("");
+  const prod = draftLegs.reduce((a,l)=>a*l.odds,1);
+  total.textContent = `combinada ×${draftLegs.length} · cuota acumulada ${prod.toFixed(2)} (falta la pierna en carga)`;
+}
+
+function addPick(){
+  const match = val("f-match"), pick = val("f-pick"),
+        odds = parseFloat(val("f-odds")), stake = parseFloat(val("f-stake")) || 1;
+  const hasCurrent = match && pick && odds > 1;
+
+  let legs = draftLegs.slice();
+  if(hasCurrent) legs.push({match, pick, odds});
+  if(!legs.length){ showErr("Completá partido, pick y una cuota mayor a 1."); return; }
+
+  const id = picks.length ? Math.max(...picks.map(p=>p.id))+1 : 1;
+  if(legs.length === 1){
+    picks.push({id, date: new Date().toISOString().slice(0,10),
+                match: legs[0].match, pick: legs[0].pick,
+                odds_taken: legs[0].odds, stake, result: ""});
+  } else {
+    const oddsTotal = legs.reduce((a,l)=>a*l.odds,1);
+    picks.push({id, date: new Date().toISOString().slice(0,10),
+                match: legs.map(l=>l.match).join(" / "),
+                pick: legs.map(l=>l.pick).join(" + "),
+                odds_taken: Math.round(oddsTotal*100)/100, stake, result: "", legs});
+  }
+  draftLegs = [];
+  ["f-match","f-pick","f-odds"].forEach(i=>document.getElementById(i).value="");
+  document.getElementById("f-match").focus();
+  renderDraft(); updateStakeHint(); saveStore(); render();
+}
+
+function setResult(id, r){
+  const p = picks.find(x=>x.id===id);
+  p.result = r; saveStore(); render();
+}
+function setFinal(id, r){
+  const p = picks.find(x=>x.id===id);
+  p.final = r; saveStore(); render();
+}
+
+let delArm = null, delTimer = null;
+function delBtn(id){
+  return delArm===id
+    ? `<button class="del" style="color:var(--neg);font-size:12px;font-family:var(--mono)" onclick="delPick(${id})">¿borrar?</button>`
+    : `<button class="del" title="borrar pick" onclick="delPick(${id})">×</button>`;
+}
+function delPick(id){
+  if(delArm === id){
+    picks = picks.filter(p=>p.id!==id);
+    delArm = null; clearTimeout(delTimer);
+    saveStore(); render(); return;
+  }
+  delArm = id; render();
+  clearTimeout(delTimer);
+  delTimer = setTimeout(()=>{ delArm = null; render(); }, 2500);
+}
+const pnlU = p => p.result==="w" ? p.stake*(p.odds_taken-1)
+              : (p.result==="l" ? -p.stake
+              : (p.result==="c" ? (p.cashout - p.stake) : 0));
+const roiOf = p => p.result==="w" ? (p.odds_taken-1)
+              : (p.result==="c" ? (p.cashout - p.stake)/p.stake : -1);   // por unidad
+
+const fmt = x => (x>=0?"+":"") + (100*x).toFixed(2) + "%";
+const fmtU = x => (x>=0?"+":"") + x.toFixed(2) + "u";
+const val = id => document.getElementById(id).value.trim();
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render(){ renderPending(); renderHistory(); renderReport(); }
+
+function renderPending(){
+  const pend = picks.filter(p=>!p.result);
+  const el = document.getElementById("pending");
+  if(!pend.length){ el.innerHTML = '<div class="empty">Sin pendientes.</div>'; return; }
+  el.innerHTML = '<table><tr><th>#</th><th>Partido</th><th>Pick @ cuota</th><th>Stake</th><th>Resultado</th><th></th></tr>' +
+    pend.map(p=>{
+      const actions = (coId===p.id)
+        ? `<input id="co-amt" class="num" type="number" inputmode="decimal" step="0.05" min="0" placeholder="recibido (u)"
+             style="width:104px;padding:6px 8px" onkeydown="if(event.key==='Enter')confirmCashout(${p.id})">
+           <button class="primary" style="padding:6px 10px;font-size:12px" onclick="confirmCashout(${p.id})">OK</button>
+           <button class="del" onclick="cancelCashout()">×</button>`
+        : `<span class="wl"><button class="w" onclick="setResult(${p.id},'w')">W</button>
+           <button class="l" onclick="setResult(${p.id},'l')">L</button>
+           <button class="c" title="cashout" onclick="doCashout(${p.id})">C</button></span>`;
+      return `<tr><td class="mono">${p.id}</td>
+      <td>${esc(p.match)}</td>
+      <td class="mono">${comboBadge(p)}${esc(p.pick)} @ ${p.odds_taken.toFixed(2)}</td>
+      <td class="mono">${p.stake}u</td>
+      <td style="white-space:nowrap">${actions}</td>
+      <td>${delBtn(p.id)}</td></tr>` + legsDetailRow(p, 6);
+    }).join("") + '</table>';
+}
+
+let coId = null;
+function doCashout(id){
+  coId = id; renderPending();
+  const inp = document.getElementById("co-amt"); if(inp) inp.focus();
+}
+function cancelCashout(){ coId = null; renderPending(); }
+function confirmCashout(id){
+  const inp = document.getElementById("co-amt");
+  const amt = parseFloat(String(inp.value).replace(",","."));
+  if(isNaN(amt) || amt < 0){ inp.style.borderColor = "var(--neg)"; inp.focus(); return; }
+  const p = picks.find(x=>x.id===id);
+  p.result = "c"; p.cashout = amt; p.final = "";
+  coId = null; saveStore(); render();
+}
+
+function renderHistory(){
+  const done = picks.filter(p=>p.result).slice().reverse();
+  const el = document.getElementById("history");
+  if(!done.length){ el.innerHTML = '<div class="empty">Todavía no hay resultados cargados.</div>'; return; }
+  el.innerHTML = '<table><tr><th>Fecha</th><th>Partido</th><th>Pick @ cuota</th><th>Res.</th><th>PnL</th><th></th></tr>' +
+    done.map(p=>{
+      const u = pnlU(p);
+      let resCell;
+      if(p.result==="c"){
+        const fin = p.final==="w" ? " · final W" : (p.final==="l" ? " · final L" :
+          ` · <span class="wl"><button class="w" title="¿hubiera ganado?" onclick="setFinal(${p.id},'w')">W</button><button class="l" title="¿hubiera perdido?" onclick="setFinal(${p.id},'l')">L</button></span>`);
+        resCell = `<span style="color:var(--warn)">C ${p.cashout}u</span>${fin}`;
+      } else {
+        resCell = p.result.toUpperCase();
+      }
+      return `<tr><td class="mono">${p.date}</td><td>${esc(p.match)}</td>
+      <td class="mono">${comboBadge(p)}${esc(p.pick)} @ ${p.odds_taken.toFixed(2)}</td>
+      <td class="mono">${resCell}</td>
+      <td class="mono ${u>=0?'p-pos':'p-neg'}">${fmtU(u)}</td>
+      <td style="white-space:nowrap">
+        <button class="del" title="volver a pendientes" onclick="undoResult(${p.id})">↩</button>
+        ${delBtn(p.id)}
+      </td></tr>` + legsDetailRow(p, 6);
+    }).join("") + '</table>';
+}
+
+function undoResult(id){
+  const p = picks.find(x=>x.id===id);
+  p.result = ""; delete p.cashout; delete p.final;
+  saveStore(); render();
+}
+
+function comboBadge(p){
+  return p.legs && p.legs.length>1
+    ? `<span style="background:var(--panel2);border:1px solid var(--line);border-radius:4px;
+        padding:1px 5px;margin-right:6px;font-size:10px;color:var(--warn);cursor:pointer"
+        title="ver piernas" onclick="toggleLegs(${p.id})">×${p.legs.length} ${expandedLegs.has(p.id)?"▾":"▸"}</span>` : "";
+}
+
+let expandedLegs = new Set();
+function toggleLegs(id){
+  expandedLegs.has(id) ? expandedLegs.delete(id) : expandedLegs.add(id);
+  render();
+}
+function legsDetailRow(p, cols){
+  if(!p.legs || p.legs.length<2 || !expandedLegs.has(p.id)) return "";
+  const items = p.legs.map(l=>
+    `<div style="display:flex;justify-content:space-between;gap:14px;padding:2px 0">
+      <span style="color:var(--muted)">${esc(l.match)} — ${esc(l.pick)}</span>
+      <span class="mono">@ ${(+l.odds).toFixed(2)}</span></div>`).join("");
+  const prod = p.legs.reduce((a,l)=>a*l.odds,1);
+  return `<tr><td></td><td colspan="${cols-1}" style="padding:4px 8px 10px">
+    <div style="background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+      padding:8px 12px;font-size:12.5px">${items}
+      <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);
+        margin-top:5px;padding-top:5px;color:var(--dim)">
+        <span>cuota acumulada</span><span class="mono">@ ${prod.toFixed(2)}</span></div>
+    </div></td></tr>`;
+}
+
+function renderReport(){
+  const done = picks.filter(p=>p.result==="w"||p.result==="l"||p.result==="c");
+  const el = document.getElementById("report");
+  const n = done.length;
+  if(!n){
+    el.innerHTML = '<div class="empty">Cargá tu primer pick arriba. El veredicto se construye acá.</div>'
+      + progressBar(0, 300);
+    return;
+  }
+  const rois = done.map(roiOf);                      // ROI por unidad (stake-independiente)
+  const mean = rois.reduce((a,b)=>a+b,0)/n;
+  const sd = n>1 ? Math.sqrt(rois.reduce((a,b)=>a+(b-mean)**2,0)/(n-1)) : 0;
+  const se = n>1 ? sd/Math.sqrt(n) : Infinity;
+  const lo = mean-1.96*se, hi = mean+1.96*se;
+  const decided = done.filter(p=>p.result==="w"||p.result==="l");
+  const winRate = decided.length ? decided.filter(p=>p.result==="w").length/decided.length : 0;
+
+  const pnlTotal = done.reduce((a,p)=>a+pnlU(p),0);
+  // drawdown en unidades sobre la secuencia cronológica
+  let eq=0, peak=0, maxDD=0;
+  done.forEach(p=>{ eq+=pnlU(p); peak=Math.max(peak,eq); maxDD=Math.min(maxDD, eq-peak); });
+
+  let verdict, cls;
+  const nNeed = mean!==0 && sd>0 ? Math.ceil((1.96*sd/Math.abs(mean))**2) : Infinity;
+  if(n<300){ verdict = `Muestra insuficiente (<b>${n}/300</b> mínimo para empezar a mirar). Con resultados reales el azar pesa mucho: stake chico y estable hasta que esto se defina.`; cls="v-warn"; }
+  else if(lo>0){ verdict = `<b>Evidencia de edge real.</b> El intervalo completo del ROI está sobre cero tras ${n} picks. Recién acá tiene sentido hablar de subir el sizing.`; cls="v-pos"; }
+  else if(hi<0){ verdict = `<b>Edge negativo demostrado.</b> Tras ${n} picks el intervalo completo está bajo cero: seguir apostando esto tiene esperanza de pérdida.`; cls="v-neg"; }
+  else { verdict = `Sin evidencia concluyente: el intervalo cruza el cero. Con este ROI medio (${fmt(mean)}) y esta varianza necesitás ~<b>${isFinite(nNeed)?nNeed.toLocaleString("es-AR"):"∞"}</b> picks para resolver. Una racha buena acá adentro sigue siendo indistinguible de suerte.`; cls="v-warn"; }
+
+  el.innerHTML =
+    `<div class="stats">
+      <div class="stat"><div class="v">${n}</div><div class="k">picks resueltos</div></div>
+      <div class="stat"><div class="v ${mean>=0?'p-pos':'p-neg'}">${fmt(mean)}</div><div class="k">ROI por unidad</div></div>
+      <div class="stat"><div class="v ${pnlTotal>=0?'p-pos':'p-neg'}">${fmtU(pnlTotal)}</div><div class="k">PnL total · WR ${(100*winRate).toFixed(0)}%</div></div>
+      <div class="stat"><div class="v p-neg">${fmtU(maxDD)}</div><div class="k">max drawdown</div></div>
+    </div>` + gauge(mean, lo, hi) +
+    `<div class="verdict ${cls}">${verdict}</div>` +
+    cashoutPanel(done) +
+    bandTable(done) +
+    progressBar(n, Math.max(300, isFinite(nNeed)?nNeed:300));
+}
+
+function cashoutPanel(done){
+  const cos = done.filter(p=>p.result==="c");
+  if(!cos.length) return "";
+  const withFinal = cos.filter(p=>p.final==="w"||p.final==="l");
+  const realPnl = cos.reduce((a,p)=>a+pnlU(p),0);
+  let inner = `<b>${cos.length}</b> cashout${cos.length>1?"s":""} · PnL real ${fmtU(realPnl)}`;
+  if(withFinal.length){
+    const real = withFinal.reduce((a,p)=>a+pnlU(p),0);
+    const counter = withFinal.reduce((a,p)=>a + (p.final==="w" ? p.stake*(p.odds_taken-1) : -p.stake), 0);
+    const dif = real - counter;
+    inner += ` — <b>valor de tus decisiones</b> (${withFinal.length} con final conocido): ` +
+      `cobraste ${fmtU(real)}, dejar correr daba ${fmtU(counter)} → ` +
+      `<span class="${dif>=0?'p-pos':'p-neg'}">${fmtU(dif)}</span> ` +
+      (dif>=0 ? "· tu lectura en vivo viene sumando" : "· el botón verde te está costando plata");
+  }
+  const missing = cos.length - withFinal.length;
+  if(missing) inner += ` — te falta cargar el resultado final de ${missing} (en el historial)`;
+  return `<div class="verdict" style="margin-top:10px;font-size:13px">${inner}</div>`;
+}
+
+function bandTable(done){
+  const bands = [
+    {label:"1.00–1.50", min:1.00, max:1.50},
+    {label:"1.50–2.00", min:1.50, max:2.00},
+    {label:"2.00–3.00", min:2.00, max:3.00},
+    {label:"3.00+",     min:3.00, max:Infinity},
+  ];
+  const rows = bands.map(b=>{
+    const sub = done.filter(p=>p.odds_taken>=b.min && p.odds_taken<b.max);
+    if(!sub.length) return `<tr><td class="mono">${b.label}</td>
+      <td class="mono" colspan="4" style="color:var(--dim)">—</td></tr>`;
+    const rois = sub.map(roiOf);
+    const m = rois.reduce((a,x)=>a+x,0)/sub.length;
+    const sd = sub.length>1 ? Math.sqrt(rois.reduce((a,x)=>a+(x-m)**2,0)/(sub.length-1)) : 0;
+    const se = sub.length>1 ? sd/Math.sqrt(sub.length) : Infinity;
+    const lo = m-1.96*se, hi = m+1.96*se;
+    const pnl = sub.reduce((a,p)=>a+pnlU(p),0);
+    const sig = isFinite(lo) && lo>0 ? "p-pos" : (isFinite(hi) && hi<0 ? "p-neg" : "");
+    return `<tr><td class="mono">${b.label}</td>
+      <td class="mono">${sub.length}</td>
+      <td class="mono ${m>=0?'p-pos':'p-neg'}">${fmt(m)}</td>
+      <td class="mono ${sig}">${isFinite(lo)?`[${fmt(lo)}, ${fmt(hi)}]`:"—"}</td>
+      <td class="mono ${pnl>=0?'p-pos':'p-neg'}">${fmtU(pnl)}</td></tr>`;
+  }).join("");
+  return `<div style="margin-top:16px">
+    <table><tr><th>Banda de cuota</th><th>N</th><th>ROI/u</th><th>IC 95%</th><th>PnL</th></tr>${rows}</table>
+    <div class="prog-lbl" style="margin-top:6px">cada banda necesita su propia muestra grande —
+    una banda "ganadora" con N chico es azar hasta que su intervalo completo quede sobre cero
+    (y aun así, confirmala con picks nuevos: mirar 4 bandas multiplica los falsos positivos)</div>
+  </div>`;
+}
+
+function gauge(mean, lo, hi){
+  if(!isFinite(lo)) return "";
+  const span = Math.max(0.10, Math.abs(lo)*1.4, Math.abs(hi)*1.4);
+  const x = v => 50 + 50*(v/span);
+  const col = lo>0 ? "var(--pos)" : (hi<0 ? "var(--neg)" : "var(--warn)");
+  return `<div class="gauge">
+    <div class="axis"></div><div class="zero" style="left:50%"></div>
+    <div class="band" style="left:${x(lo)}%;width:${x(hi)-x(lo)}%;background:${col}"></div>
+    <div class="mean" style="left:${x(mean)}%;background:${col}"></div>
+    <div class="lbl" style="left:${x(lo)}%">${fmt(lo)}</div>
+    <div class="lbl" style="left:${x(hi)}%">${fmt(hi)}</div>
+  </div>
+  <div class="prog-lbl" style="text-align:center">intervalo de confianza 95% del ROI por unidad</div>`;
+}
+
+function progressBar(n, target){
+  const pct = Math.min(100, 100*n/target);
+  return `<div class="progress"><i style="width:${pct}%"></i></div>
+          <div class="prog-lbl">${n}/${target.toLocaleString("es-AR")} picks para que el veredicto tenga respaldo estadístico</div>`;
+}
+
+/* ---- CSV ---- */
+function buildCSV(){
+  const head = "id,date,match,pick,odds_taken,stake,result,legs,cashout,final";
+  const q = s => '"'+String(s).replace(/"/g,'""')+'"';
+  const rows = picks.map(p=>[p.id,p.date,q(p.match),q(p.pick),p.odds_taken,p.stake,p.result,
+    p.legs ? q(p.legs.map(l=>`${l.match}~${l.pick}~${l.odds}`).join("|")) : "",
+    p.cashout!=null ? p.cashout : "", p.final||""].join(","));
+  return head+"\n"+rows.join("\n");
+}
+
+function exportCSV(){
+  try{
+    const blob = new Blob([buildCSV()], {type:"text/csv"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "picks.csv"; a.click();
+  }catch(e){ showCSV(); }   // si la descarga está bloqueada, mostrar para copiar
+}
+
+function showCSV(){
+  let box = document.getElementById("csv-box");
+  if(box){ box.remove(); return; }
+  box = document.createElement("div");
+  box.id = "csv-box";
+  box.innerHTML = `<div class="card" style="margin-top:0">
+    <h2>CSV — seleccioná todo y copialo (Ctrl+A, Ctrl+C dentro del cuadro)</h2>
+    <textarea readonly style="width:100%;height:220px;background:var(--panel2);
+      border:1px solid var(--line);color:var(--text);border-radius:7px;
+      font:12px var(--mono);padding:10px;resize:vertical">${buildCSV()
+        .replace(/&/g,"&amp;").replace(/</g,"&lt;")}</textarea>
+    <div class="prog-lbl" style="margin-top:6px">pegalo en un Bloc de notas y guardalo como
+    picks.csv — ese archivo después se importa en cualquier otra máquina</div>
+  </div>`;
+  document.querySelector("header").after(box);
+  const ta = box.querySelector("textarea");
+  ta.focus(); ta.select();
+}
+function importCSV(ev){
+  const file = ev.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const lines = reader.result.split(/\r?\n/).filter(l=>l.trim());
+    const parsed = [];
+    for(let i=1;i<lines.length;i++){
+      const f = lines[i].match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(x=>
+        x.replace(/,$/,"").replace(/^"|"$/g,"").replace(/""/g,'"'));
+      if(f.length<7) continue;   // acepta CSVs viejos (7/8 col) y nuevos (10 col)
+      const row = {id:+f[0], date:f[1], match:f[2], pick:f[3],
+        odds_taken:+f[4], stake:+f[5]||1, result:f[6]||""};
+      if(f[7]){
+        row.legs = f[7].split("|").map(s=>{
+          const [match,pick,odds] = s.split("~");
+          return {match, pick, odds:+odds};
+        });
+      }
+      if(f[8]!==undefined && f[8]!=="") row.cashout = +f[8];
+      if(f[9]) row.final = f[9];
+      parsed.push(row);
+    }
+    if(parsed.length){ picks = parsed; saveStore(); render(); }
+  };
+  reader.readAsText(file);
+  ev.target.value = "";
+}
+
+loadStore(); loadCfg(); render();
+document.getElementById("f-odds").addEventListener("input", updateStakeHint);
+</script>
+</body>
+</html>
