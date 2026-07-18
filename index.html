@@ -48,9 +48,27 @@
         letter-spacing:.05em}
 
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
-  @media(max-width:620px){.stats{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:620px){
+  body{padding:14px 8px 60px;font-size:14px}
+  header{flex-wrap:wrap;gap:8px}
+  h1{font-size:14px}
+  .io{width:100%;justify-content:flex-end}
+  .io button{padding:6px 9px;font-size:11px}
+  .card{padding:13px 10px;overflow-x:auto}
+  .card h2{font-size:10px;margin-bottom:10px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .stat .v{font-size:16px}
+  #pending table,#history table{min-width:540px}
+  table{font-size:12.5px}
+  th{padding:5px 6px} td{padding:9px 6px}
   .wl button{width:38px;height:38px;font-size:14px}
-  td{padding:10px 6px} body{padding:16px 10px 60px}}
+  .gauge .lbl{font-size:9px}
+  input,select{padding:10px 10px;font-size:15px}
+  button.primary{padding:10px 14px;font-size:14px;width:100%}
+  .row{grid-template-columns:1fr 1fr;gap:8px}
+  .row>div:first-child{grid-column:1/-1}
+  .verdict{font-size:13px}
+  .note{font-size:11.5px}}
   .stat{background:var(--panel2);border-radius:8px;padding:10px 12px}
   .stat .v{font:600 19px var(--mono)}
   .stat .k{font:10px var(--mono);color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
@@ -109,8 +127,8 @@
     <div class="row">
       <div><label>Partido</label><input id="f-match" placeholder="Sinner vs Alcaraz"></div>
       <div><label>Tu pick</label><input id="f-pick" placeholder="Sinner"></div>
-      <div><label>Cuota</label><input id="f-odds" class="num" type="number" inputmode="decimal" step="0.01" min="1.01" placeholder="1.95"></div>
-      <div><label>Stake (u)</label><input id="f-stake" class="num" type="number" inputmode="decimal" step="0.5" min="0.5" value="1"></div>
+      <div><label>Cuota</label><input id="f-odds" class="num" type="text" inputmode="decimal" autocomplete="off" step="0.01" min="1.01" placeholder="1.95"></div>
+      <div><label>Stake (u)</label><input id="f-stake" class="num" type="text" inputmode="decimal" autocomplete="off" step="0.5" min="0.5" value="1"></div>
       <div style="align-self:end"><button class="primary" onclick="addPick()">Registrar</button></div>
     </div>
     <div style="margin-top:10px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -121,9 +139,9 @@
       <span id="combo-total" class="prog-lbl" style="margin:0"></span>
       <span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">
         <span class="prog-lbl" style="margin:0">sizing k</span>
-        <input id="cfg-k" class="num" type="number" inputmode="decimal" step="0.25" min="0.25" style="width:62px;padding:5px 8px" onchange="saveCfg()">
+        <input id="cfg-k" class="num" type="text" inputmode="decimal" autocomplete="off" step="0.25" min="0.25" style="width:62px;padding:5px 8px" onchange="saveCfg()">
         <span class="prog-lbl" style="margin:0">tope</span>
-        <input id="cfg-cap" class="num" type="number" inputmode="decimal" step="0.5" min="1" style="width:62px;padding:5px 8px" onchange="saveCfg()">
+        <input id="cfg-cap" class="num" type="text" inputmode="decimal" autocomplete="off" step="0.5" min="1" style="width:62px;padding:5px 8px" onchange="saveCfg()">
       </span>
     </div>
     <div id="stake-hint" class="prog-lbl" style="margin-top:8px"></div>
@@ -233,8 +251,8 @@ function loadCfg(){
   document.getElementById("cfg-cap").value = cfg.cap;
 }
 function saveCfg(){
-  cfg.k = parseFloat(document.getElementById("cfg-k").value) || 1;
-  cfg.cap = parseFloat(document.getElementById("cfg-cap").value) || 5;
+  cfg.k = num(document.getElementById("cfg-k").value) || 1;
+  cfg.cap = num(document.getElementById("cfg-cap").value) || 5;
   try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){}
   updateStakeHint();
 }
@@ -242,7 +260,7 @@ function saveCfg(){
 function totalOdds(){
   // cuota acumulada: piernas ya cargadas × la que está en el campo
   let prod = draftLegs.reduce((a,l)=>a*l.odds, 1);
-  const cur = parseFloat(val("f-odds"));
+  const cur = num(val("f-odds"));
   if(cur > 1) prod *= cur;
   return prod > 1 ? prod : null;
 }
@@ -272,7 +290,7 @@ function showErr(msg){
 }
 
 function addLeg(){
-  const match = val("f-match"), pick = val("f-pick"), odds = parseFloat(val("f-odds"));
+  const match = val("f-match"), pick = val("f-pick"), odds = num(val("f-odds"));
   if(!match || !pick || !(odds > 1)){ showErr("Completá partido, pick y cuota de esta pierna antes de agregar otra."); return; }
   draftLegs.push({match, pick, odds});
   ["f-match","f-pick","f-odds"].forEach(i=>document.getElementById(i).value="");
@@ -298,7 +316,7 @@ function renderDraft(){
 
 function addPick(){
   const match = val("f-match"), pick = val("f-pick"),
-        odds = parseFloat(val("f-odds")), stake = parseFloat(val("f-stake")) || 1;
+        odds = num(val("f-odds")), stake = num(val("f-stake")) || 1;
   const hasCurrent = match && pick && odds > 1;
 
   let legs = draftLegs.slice();
@@ -354,6 +372,7 @@ const pnlU = p => p.result==="w" ? p.stake*(p.odds_taken-1)
 const roiOf = p => p.result==="w" ? (p.odds_taken-1)
               : (p.result==="c" ? (p.cashout - p.stake)/p.stake : -1);   // por unidad
 
+const num = s => parseFloat(String(s).trim().replace(",", "."));
 const fmt = x => (x>=0?"+":"") + (100*x).toFixed(2) + "%";
 const fmtU = x => (x>=0?"+":"") + x.toFixed(2) + "u";
 const val = id => document.getElementById(id).value.trim();
@@ -368,7 +387,7 @@ function renderPending(){
   el.innerHTML = '<table><tr><th>#</th><th>Partido</th><th>Pick @ cuota</th><th>Stake</th><th>Resultado</th><th></th></tr>' +
     pend.map(p=>{
       const actions = (coId===p.id)
-        ? `<input id="co-amt" class="num" type="number" inputmode="decimal" step="0.05" min="0" placeholder="recibido (u)"
+        ? `<input id="co-amt" class="num" type="text" inputmode="decimal" autocomplete="off" step="0.05" min="0" placeholder="recibido (u)"
              style="width:104px;padding:6px 8px" onkeydown="if(event.key==='Enter')confirmCashout(${p.id})">
            <button class="primary" style="padding:6px 10px;font-size:12px" onclick="confirmCashout(${p.id})">OK</button>
            <button class="del" onclick="cancelCashout()">×</button>`
@@ -392,7 +411,7 @@ function doCashout(id){
 function cancelCashout(){ coId = null; renderPending(); }
 function confirmCashout(id){
   const inp = document.getElementById("co-amt");
-  const amt = parseFloat(String(inp.value).replace(",","."));
+  const amt = num(inp.value);
   if(isNaN(amt) || amt < 0){ inp.style.borderColor = "var(--neg)"; inp.focus(); return; }
   const p = picks.find(x=>x.id===id);
   p.result = "c"; p.cashout = amt; p.final = "";
